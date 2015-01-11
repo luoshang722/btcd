@@ -5,7 +5,6 @@
 package main
 
 import (
-	"container/list"
 	"crypto/rand"
 	"fmt"
 	"math"
@@ -96,7 +95,7 @@ type txMemPool struct {
 	server        *server
 	pool          map[btcwire.ShaHash]*TxDesc
 	orphans       map[btcwire.ShaHash]*btcutil.Tx
-	orphansByPrev map[btcwire.ShaHash]*list.List
+	orphansByPrev map[btcwire.ShaHash][]*btcutil.Tx
 	outpoints     map[btcwire.OutPoint]*btcutil.Tx
 	lastUpdated   time.Time // last time pool was updated
 	pennyTotal    float64   // exponentially decaying total for penny spends.
@@ -397,50 +396,84 @@ func calcMinRequiredTxRelayFee(serializedSize int64) int64 {
 	return minFee
 }
 
-// removeOrphan is the internal function which implements the public
-// RemoveOrphan.  See the comment for RemoveOrphan for more details.
+// removeOrphans is the internal function which implements the public
+// RemoveOrphans.  See the comment for RemoveOrphans for more details.
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *txMemPool) removeOrphan(txHash *btcwire.ShaHash) {
+func (mp *txMemPool) removeOrphans(txHash *btcwire.ShaHash) {
 	// Nothing to do if passed tx is not an orphan.
-	tx, exists := mp.orphans[*txHash]
-	if !exists {
+	orphanTx, ok := mp.orphans[*txHash]
+	if !ok {
 		return
 	}
 
-	// Remove the reference from the previous orphan index.
-	for _, txIn := range tx.MsgTx().TxIn {
-		originTxHash := txIn.PreviousOutPoint.Hash
-		if orphans, exists := mp.orphansByPrev[originTxHash]; exists {
-			for e := orphans.Front(); e != nil; e = e.Next() {
-				if e.Value.(*btcutil.Tx) == tx {
-					orphans.Remove(e)
+	// For this transaction and all children, remove from the orphan pool
+	// and cleanup all references from each parent hash to this orphan.
+	orphans := []*btcutil.Tx{orphanTx}
+	for len(orphans) != 0 {
+		lastIdx := len(orphans) - 1
+		orphan := orphans[lastIdx]
+		orphans = orphans[:lastIdx]
+
+		orphanHash := orphan.Sha()
+		msgTx := orphan.MsgTx()
+
+		// Remove from orphan pool.
+		delete(mp.orphans, *orphanHash)
+
+		// Remove references from each parent transaction to the
+		// removed orphan.
+		for _, txIn := range msgTx.TxIn {
+			parentHash := &txIn.PreviousOutPoint.Hash
+			children, ok := mp.orphansByPrev[*parentHash]
+			if !ok {
+				continue
+			}
+
+			for i, child := range children {
+				if child != orphan {
+					continue
+				}
+
+				// Remove the parent tx hash altogether if the
+				// child orphan being removed is the last orphan
+				// which references this parent hash.
+				if len(orphans) == 1 {
+					delete(mp.orphansByPrev, *parentHash)
 					break
 				}
-			}
 
-			// Remove the map entry altogether if there are no
-			// longer any orphans which depend on it.
-			if orphans.Len() == 0 {
-				delete(mp.orphansByPrev, originTxHash)
+				// Remove orphan transaction from the child set
+				// by moving the last to this index and slicing
+				// off the last element.
+				last := len(children) - 1
+				children[i], children[last] = children[last], nil
+				mp.orphansByPrev[*parentHash] = children[:last]
+				break
 			}
 		}
-	}
 
-	// Remove the transaction from the orphan pool.
-	delete(mp.orphans, *txHash)
+		// If this orphan is the parent of any other children orphans in
+		// the pool, they must be removed as well.
+		childOrphans, ok := mp.orphansByPrev[*orphanHash]
+		if ok {
+			orphans = append(orphans, childOrphans...)
+		}
+	}
 }
 
-// RemoveOrphan removes the passed orphan transaction from the orphan pool and
+// RemoveOrphans removes the passed orphan transaction and all all child
+// transactions from the orphan pool and
 // previous orphan index.
 // This function is safe for concurrent access.
-func (mp *txMemPool) RemoveOrphan(txHash *btcwire.ShaHash) {
+func (mp *txMemPool) RemoveOrphans(txHash *btcwire.ShaHash) {
 	mp.Lock()
-	mp.removeOrphan(txHash)
+	mp.removeOrphans(txHash)
 	mp.Unlock()
 }
 
 // limitNumOrphans limits the number of orphan transactions by evicting a random
-// orphan if adding a new one would cause it to overflow the max allowed.
+// orphan and any known children if adding a new one would cause it to exceed
+// the max allowed.
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *txMemPool) limitNumOrphans() error {
@@ -470,7 +503,7 @@ func (mp *txMemPool) limitNumOrphans() error {
 			}
 		}
 
-		mp.removeOrphan(foundHash)
+		mp.removeOrphans(foundHash)
 	}
 
 	return nil
@@ -486,11 +519,9 @@ func (mp *txMemPool) addOrphan(tx *btcutil.Tx) {
 
 	mp.orphans[*tx.Sha()] = tx
 	for _, txIn := range tx.MsgTx().TxIn {
-		originTxHash := txIn.PreviousOutPoint.Hash
-		if mp.orphansByPrev[originTxHash] == nil {
-			mp.orphansByPrev[originTxHash] = list.New()
-		}
-		mp.orphansByPrev[originTxHash].PushBack(tx)
+		parentHash := &txIn.PreviousOutPoint.Hash
+		orphans := mp.orphansByPrev[*parentHash]
+		mp.orphansByPrev[*parentHash] = append(orphans, tx)
 	}
 
 	txmpLog.Debugf("Stored orphan transaction %v (total: %d)", tx.Sha(),
@@ -795,22 +826,7 @@ func (mp *txMemPool) FetchTransaction(txHash *btcwire.ShaHash) (*btcutil.Tx, err
 	return nil, fmt.Errorf("transaction is not in the pool")
 }
 
-// maybeAcceptTransaction is the internal function which implements the public
-// MaybeAcceptTransaction.  See the comment for MaybeAcceptTransaction for
-// more details.
-//
-// This function MUST be called with the mempool lock held (for writes).
-func (mp *txMemPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit bool) ([]*btcwire.ShaHash, error) {
-	txHash := tx.Sha()
-
-	// Don't accept the transaction if it already exists in the pool.  This
-	// applies to orphan transactions as well.  This check is intended to
-	// be a quick check to weed out duplicates.
-	if mp.haveTransaction(txHash) {
-		str := fmt.Sprintf("already have transaction %v", txHash)
-		return nil, txRuleError(btcwire.RejectDuplicate, str)
-	}
-
+func (mp *txMemPool) preliminaryAcceptChecks(tx *btcutil.Tx) error {
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of btcchain which contains the invariant rules for what
 	// transactions are allowed into blocks.
@@ -837,6 +853,27 @@ func (mp *txMemPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit boo
 		str := fmt.Sprintf("transaction %v has a lock time after "+
 			"2038 which is not accepted yet", txHash)
 		return nil, txRuleError(btcwire.RejectNonstandard, str)
+	}
+
+	return nil
+}
+
+// maybeAcceptTransaction is the internal function which implements the public
+// MaybeAcceptTransaction.  See the comment for MaybeAcceptTransaction for
+// more details.
+//
+// This function MUST be called with the mempool lock held (for writes).
+func (mp *txMemPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit bool) ([]*btcwire.ShaHash, error) {
+	txHash := tx.Sha()
+
+	// TODO: preliminaryAcceptChecks
+
+	// Don't accept the transaction if it already exists in the pool.  This
+	// applies to orphan transactions as well.  This check is intended to
+	// be a quick check to weed out duplicates.
+	if mp.haveTransaction(txHash) {
+		str := fmt.Sprintf("already have transaction %v", txHash)
+		return nil, txRuleError(btcwire.RejectDuplicate, str)
 	}
 
 	// Get the current height of the main chain.  A standalone transaction
@@ -1071,86 +1108,80 @@ func (mp *txMemPool) MaybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit boo
 // orphans) until there are no more.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *txMemPool) processOrphans(hash *btcwire.ShaHash) error {
+func (mp *txMemPool) processOrphans(hash *btcwire.ShaHash) {
 	// Start with processing at least the passed hash.
-	processHashes := list.New()
-	processHashes.PushBack(hash)
-	for processHashes.Len() > 0 {
+	processHashes := []*btcwire.ShaHash{hash}
+	for len(processHashes) != 0 {
 		// Pop the first hash to process.
-		firstElement := processHashes.Remove(processHashes.Front())
-		processHash := firstElement.(*btcwire.ShaHash)
+		processHash := processHashes[0]
+		processHashes = processHashes[1:]
 
 		// Look up all orphans that are referenced by the transaction we
 		// just accepted.  This will typically only be one, but it could
 		// be multiple if the referenced transaction contains multiple
 		// outputs.  Skip to the next item on the list of hashes to
 		// process if there are none.
-		orphans, exists := mp.orphansByPrev[*processHash]
-		if !exists || orphans == nil {
+		orphans, ok := mp.orphansByPrev[*processHash]
+		if !ok || orphans == nil {
 			continue
 		}
 
-		var enext *list.Element
-		for e := orphans.Front(); e != nil; e = enext {
-			enext = e.Next()
-			tx := e.Value.(*btcutil.Tx)
-
-			// Remove the orphan from the orphan pool.  Current
-			// behavior requires that all saved orphans with
-			// a newly accepted parent are removed from the orphan
-			// pool and potentially added to the memory pool, but
-			// transactions which cannot be added to memory pool
-			// (including due to still being orphans) are expunged
-			// from the orphan pool.
-			//
-			// TODO(jrick): The above described behavior sounds
-			// like a bug, and I think we should investigate
-			// potentially moving orphans to the memory pool, but
-			// leaving them in the orphan pool if not all parent
-			// transactions are known yet.
-			orphanHash := tx.Sha()
-			mp.removeOrphan(orphanHash)
-
+		for _, orphan := range orphans {
 			// Potentially accept the transaction into the
 			// transaction pool.
-			missingParents, err := mp.maybeAcceptTransaction(tx,
-				true, true)
-			if err != nil {
-				return err
+			if !mp.maybeAcceptOldOrphan(orphan) {
+				continue
 			}
 
-			if len(missingParents) == 0 {
-				// Generate and relay the inventory vector for the
-				// newly accepted transaction.
-				iv := btcwire.NewInvVect(btcwire.InvTypeTx, tx.Sha())
-				mp.server.RelayInventory(iv)
-			} else {
-				// Transaction is still an orphan.
-				// TODO(jrick): This removeOrphan call is
-				// likely unnecessary as it was unconditionally
-				// removed above and maybeAcceptTransaction won't
-				// add it back.
-				mp.removeOrphan(orphanHash)
-			}
+			// Generate and relay the inventory vector for the
+			// newly accepted transaction.
+			orphanHash := orphan.Sha()
+			iv := btcwire.NewInvVect(btcwire.InvTypeTx, orphanHash)
+			mp.server.RelayInventory(iv)
 
 			// Add this transaction to the list of transactions to
 			// process so any orphans that depend on this one are
 			// handled too.
-			//
-			// TODO(jrick): In the case that this is still an orphan,
-			// we know that any other transactions in the orphan
-			// pool with this orphan as their parent are still
-			// orphans as well, and should be removed.  While
-			// recursively calling removeOrphan and
-			// maybeAcceptTransaction on these transactions is not
-			// wrong per se, it is overkill if all we care about is
-			// recursively removing child transactions of this
-			// orphan.
-			processHashes.PushBack(orphanHash)
+			processHashes = append(processHashes, orphanHash)
 		}
 	}
+}
 
-	return nil
+// maybeAcceptOldOrphan attempts to accept a transaction already in the orphan
+// pool to the memory pool if it is no longer an orphan.  Transactions still
+// missing parents are left in the orphan pool.
+//
+// If the transaction is no longer an orphan, it is checked against all mempool
+// acceptance rules that were not checked when it was inserted as an orphan.
+// If these are satisified, it is moved from orphan pool to the memory pool and
+// any child orphans are left untouched (for the caller to handle with
+// additional calls to this method).
+//
+// If the transaction fails the mempool acceptance checks, it and all child
+// orphans are removed from the orphan pool.
+//
+// This return value is true iff the transaction was successfully moved from the
+// orphan pool to the memory pool.
+//
+// This function MUST be called with the mempool lock held (for writes).
+func (mp *txMemPool) maybeAcceptOldOrphan(tx *btcutil.Tx) bool {
+	// TODO: This currently will always fail due to the tx still being in
+	// in the orphan pool.
+	// TODO: maybeAcceptTransaction might be overkill here.
+	missingParents, err := mp.maybeAcceptTransaction(tx, true, true)
+	if err != nil {
+		// Transaction is no longer an orphan and failed a rule, or
+		// there was some other error encounted accepting the
+		// transaction.  Remove it and all children from the orphan
+		// pool.
+		mp.removeOrphans(tx.Sha())
+		return false
+	}
+
+	// Accepted transaction with no returned missing parents were
+	// successfully moved from the orphan pool to the memory pool.
+	// Otherwise, the transaction remains in the orphan pool.
+	return len(missingParents) == 0
 }
 
 // ProcessTransaction is the main workhorse for handling insertion of new
@@ -1181,10 +1212,7 @@ func (mp *txMemPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit b
 		// transaction (they may no longer be orphans if all inputs
 		// are now available) and repeat for those accepted
 		// transactions until there are no more.
-		err := mp.processOrphans(tx.Sha())
-		if err != nil {
-			return err
-		}
+		mp.processOrphans(tx.Sha())
 	} else {
 		// The transaction is an orphan (has inputs missing).  Reject
 		// it if the flag to allow orphans is not set.
@@ -1280,7 +1308,7 @@ func newTxMemPool(server *server) *txMemPool {
 		server:        server,
 		pool:          make(map[btcwire.ShaHash]*TxDesc),
 		orphans:       make(map[btcwire.ShaHash]*btcutil.Tx),
-		orphansByPrev: make(map[btcwire.ShaHash]*list.List),
+		orphansByPrev: make(map[btcwire.ShaHash][]*btcutil.Tx),
 		outpoints:     make(map[btcwire.OutPoint]*btcutil.Tx),
 	}
 }

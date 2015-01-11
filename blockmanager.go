@@ -1149,7 +1149,7 @@ func (b *blockManager) handleNotifyMsg(notification *btcchain.Notification) {
 		for _, tx := range block.Transactions()[1:] {
 			b.server.txMemPool.RemoveTransaction(tx)
 			b.server.txMemPool.RemoveDoubleSpends(tx)
-			b.server.txMemPool.RemoveOrphan(tx.Sha())
+			b.server.txMemPool.RemoveOrphans(tx.Sha())
 		}
 
 		if r := b.server.rpcServer; r != nil {
