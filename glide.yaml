@@ -2,7 +2,8 @@ package: github.com/ltcsuite/ltcd
 import:
 - package: github.com/btcsuite/btclog
 - package: github.com/ltcsuite/ltcutil
-  version: a88d7dfb1c02af5dffe005ad21f40c42d9fd5ad0
+  repo: https://github.com/jrick/btcutil
+  version: ltcamounts
   subpackages:
   - bloom
   - hdkeychain
