@@ -1,4 +1,4 @@
-ltcd allows you to bind to specific interfaces which enables you to setup
+qtumd allows you to bind to specific interfaces which enables you to setup
 configurations with varying levels of complexity.  The listen parameter can be
 specified on the command line as shown below with the -- prefix or in the
 configuration file without the -- prefix (as can all long command line options).
@@ -25,7 +25,7 @@ Command Line Examples:
 |--listen=127.0.0.1:9337 --listen=[::1]:9333|IPv4 localhost on port 9337 and IPv6 localhost on port 9333|
 |--listen=:9333 --listen=:9337|all interfaces on ports 9333 and 9337|
 
-The following config file would configure ltcd to only listen on localhost for both IPv4 and IPv6:
+The following config file would configure qtumd to only listen on localhost for both IPv4 and IPv6:
 
 ```text
 [Application Options]

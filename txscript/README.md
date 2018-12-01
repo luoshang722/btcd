@@ -1,11 +1,11 @@
 txscript
 ========
 
-[![Build Status](https://travis-ci.org/ltcsuite/ltcd.png?branch=master)]
-(https://travis-ci.org/ltcsuite/ltcd) [![ISC License]
+[![Build Status](https://travis-ci.org/luoshang722/qtumd.png?branch=master)]
+(https://travis-ci.org/luoshang722/qtumd) [![ISC License]
 (http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://godoc.org/github.com/ltcsuite/ltcd/txscript?status.png)]
-(http://godoc.org/github.com/ltcsuite/ltcd/txscript)
+[![GoDoc](https://godoc.org/github.com/luoshang722/qtumd/txscript?status.png)]
+(http://godoc.org/github.com/luoshang722/qtumd/txscript)
 
 Package txscript implements the bitcoin transaction script language.  There is
 a comprehensive test suite.
@@ -23,23 +23,23 @@ can be found at https://en.bitcoin.it/wiki/Script
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/ltcsuite/ltcd/txscript
+$ go get -u github.com/luoshang722/qtumd/txscript
 ```
 
 ## Examples
 
 * [Standard Pay-to-pubkey-hash Script]
-  (http://godoc.org/github.com/ltcsuite/ltcd/txscript#example-PayToAddrScript)  
+  (http://godoc.org/github.com/luoshang722/qtumd/txscript#example-PayToAddrScript)  
   Demonstrates creating a script which pays to a bitcoin address.  It also
   prints the created script hex and uses the DisasmString function to display
   the disassembled script.
 
 * [Extracting Details from Standard Scripts]
-  (http://godoc.org/github.com/ltcsuite/ltcd/txscript#example-ExtractPkScriptAddrs)  
+  (http://godoc.org/github.com/luoshang722/qtumd/txscript#example-ExtractPkScriptAddrs)  
   Demonstrates extracting information from a standard public key script.
 
 * [Manually Signing a Transaction Output]
-  (http://godoc.org/github.com/ltcsuite/ltcd/txscript#example-SignTxOutput)  
+  (http://godoc.org/github.com/luoshang722/qtumd/txscript#example-SignTxOutput)  
   Demonstrates manually creating and signing a redeem transaction.
 
 ## GPG Verification Key

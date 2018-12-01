@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
-	"github.com/ltcsuite/ltcd/wire"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/wire"
 )
 
 // TestMruInventoryMap ensures the MruInventoryMap behaves as expected including

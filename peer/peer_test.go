@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ltcsuite/ltcd/chaincfg"
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
-	"github.com/ltcsuite/ltcd/peer"
-	"github.com/ltcsuite/ltcd/wire"
+	"github.com/luoshang722/qtumd/chaincfg"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/peer"
+	"github.com/luoshang722/qtumd/wire"
 	"github.com/btcsuite/go-socks/socks"
 )
 

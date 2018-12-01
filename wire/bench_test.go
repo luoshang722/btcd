@@ -13,7 +13,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
 )
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for

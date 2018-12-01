@@ -5,8 +5,8 @@
 package mempool
 
 import (
-	"github.com/ltcsuite/ltcd/blockchain"
-	"github.com/ltcsuite/ltcd/wire"
+	"github.com/luoshang722/qtumd/blockchain"
+	"github.com/luoshang722/qtumd/wire"
 )
 
 // RuleError identifies a rule violation.  It is used to indicate that

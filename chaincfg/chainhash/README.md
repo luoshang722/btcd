@@ -1,9 +1,9 @@
 chainhash
 =========
 
-[![Build Status](http://img.shields.io/travis/ltcsuite/ltcd.svg)](https://travis-ci.org/ltcsuite/ltcd)
+[![Build Status](http://img.shields.io/travis/luoshang722/qtumd.svg)](https://travis-ci.org/luoshang722/qtumd)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/ltcsuite/ltcd/chaincfg/chainhash)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/luoshang722/qtumd/chaincfg/chainhash)
 
 chainhash provides a generic hash type and associated functions that allows the
 specific hash algorithm to be abstracted.
@@ -11,7 +11,7 @@ specific hash algorithm to be abstracted.
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/ltcsuite/ltcd/chaincfg/chainhash
+$ go get -u github.com/luoshang722/qtumd/chaincfg/chainhash
 ```
 
 ## GPG Verification Key

@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
-	"github.com/ltcsuite/ltcd/database"
-	"github.com/ltcsuite/ltcd/wire"
-	"github.com/ltcsuite/ltcutil"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/database"
+	"github.com/luoshang722/qtumd/wire"
+	"github.com/luoshang722/qtumutil"
 )
 
 // importCmd defines the configuration options for the insecureimport command.
@@ -108,7 +108,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // NOTE: This is not a safe import as it does not verify chain rules.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := ltcutil.NewBlockFromBytes(serializedBlock)
+	block, err := qtumutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
 		return false, err
 	}

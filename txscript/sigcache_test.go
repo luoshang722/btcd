@@ -8,8 +8,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/ltcsuite/ltcd/btcec"
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/btcec"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
 )
 
 // genRandomSig returns a random message, a signature of the message under the

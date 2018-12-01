@@ -12,7 +12,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
+	"github.com/luoshang722/qtumd/chaincfg/chainhash"
 )
 
 const (

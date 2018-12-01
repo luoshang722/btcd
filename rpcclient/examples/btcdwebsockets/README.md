@@ -1,7 +1,7 @@
-ltcd Websockets Example
+qtumd Websockets Example
 =======================
 
-This example shows how to use the rpcclient package to connect to a ltcd RPC
+This example shows how to use the rpcclient package to connect to a qtumd RPC
 server using TLS-secured websockets, register for block connected and block
 disconnected notifications, and get the current block count.
 
@@ -13,7 +13,7 @@ demonstrate clean shutdown.
 The first step is to use `go get` to download and install the rpcclient package:
 
 ```bash
-$ go get github.com/ltcsuite/ltcd/rpcclient
+$ go get github.com/luoshang722/qtumd/rpcclient
 ```
 
 Next, modify the `main.go` source to specify the correct RPC username and
@@ -27,7 +27,7 @@ password for the RPC server:
 Finally, navigate to the example's directory and run it with:
 
 ```bash
-$ cd $GOPATH/src/github.com/ltcsuite/ltcd/rpcclient/examples/ltcdwebsockets
+$ cd $GOPATH/src/github.com/luoshang722/qtumd/rpcclient/examples/qtumdwebsockets
 $ go run *.go
 ```
 

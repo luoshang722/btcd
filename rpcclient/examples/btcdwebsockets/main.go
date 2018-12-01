@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ltcsuite/ltcd/rpcclient"
-	"github.com/ltcsuite/ltcd/wire"
-	"github.com/ltcsuite/ltcutil"
+	"github.com/luoshang722/qtumd/rpcclient"
+	"github.com/luoshang722/qtumd/wire"
+	"github.com/luoshang722/qtumutil"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
-		OnFilteredBlockConnected: func(height int32, header *wire.BlockHeader, txns []*ltcutil.Tx) {
+		OnFilteredBlockConnected: func(height int32, header *wire.BlockHeader, txns []*qtumutil.Tx) {
 			log.Printf("Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp)
 		},
@@ -31,9 +31,9 @@ func main() {
 		},
 	}
 
-	// Connect to local ltcd RPC server using websockets.
-	ltcdHomeDir := ltcutil.AppDataDir("ltcd", false)
-	certs, err := ioutil.ReadFile(filepath.Join(ltcdHomeDir, "rpc.cert"))
+	// Connect to local qtumd RPC server using websockets.
+	qtumdHomeDir := qtumutil.AppDataDir("qtumd", false)
+	certs, err := ioutil.ReadFile(filepath.Join(qtumdHomeDir, "rpc.cert"))
 	if err != nil {
 		log.Fatal(err)
 	}

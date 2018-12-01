@@ -9,15 +9,15 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/ltcsuite/ltcd/blockchain"
-	"github.com/ltcsuite/ltcd/blockchain/indexers"
-	"github.com/ltcsuite/ltcd/database"
-	"github.com/ltcsuite/ltcd/limits"
+	"github.com/luoshang722/qtumd/blockchain"
+	"github.com/luoshang722/qtumd/blockchain/indexers"
+	"github.com/luoshang722/qtumd/database"
+	"github.com/luoshang722/qtumd/limits"
 	"github.com/btcsuite/btclog"
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the ltcd block database.
+	// blockDbNamePrefix is the prefix for the qtumd block database.
 	blockDbNamePrefix = "blocks"
 )
 
